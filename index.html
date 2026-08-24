@@ -91,6 +91,9 @@
         
         textarea { flex: 1; border: none; outline: none; background: transparent; color: var(--text); font-size: 16px; resize: none; max-height: 180px; font-family: inherit; }
         
+        .btn-icon { background: transparent; border: none; cursor: pointer; font-size: 18px; color: var(--text); opacity: 0.7; transition: 0.2s; }
+        .btn-icon:hover { opacity: 1; }
+
         .mic-active { color: #ea4335 !important; animation: pulseRed 1s infinite; }
         @keyframes pulseRed { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
@@ -192,7 +195,6 @@
         document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     }
 
-    // --- VOZ FEMININA APRIMORADA ---
     function speak(text) {
         window.speechSynthesis.cancel();
         const clean = text.replace(/[*#_`]/g, '').replace(/[^\w\sÀ-ú.,?!]/g, ' ');
@@ -245,13 +247,26 @@
         try {
             const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
-                headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+                headers: { 
+                    "Authorization": `Bearer ${API_KEY}`, 
+                    "Content-Type": "application/json" 
+                },
                 body: JSON.stringify({
                     model: "llama-3.3-70b-versatile",
-                    messages: [{ role: "system", content: "Você é a Clara, uma assistente virtual feminina, inteligente e gentil. Responda em português de forma clara e útil." }, ...memory.slice(-10)],
+                    messages: [
+                        { role: "system", content: "Você é a Clara, uma assistente virtual feminina, inteligente e gentil. Responda em português de forma clara e útil." }, 
+                        ...memory.slice(-10)
+                    ],
                     temperature: 0.7
                 })
             });
+
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}));
+                const msg = errBody.error?.message || `Erro de conexão HTTP (Status ${res.status})`;
+                throw new Error(msg);
+            }
+
             const data = await res.json();
             const reply = data.choices[0].message.content;
 
@@ -261,7 +276,8 @@
             speak(reply);
             renderHistory();
         } catch (e) {
-            addBubble('assistant', "Houve um erro na minha conexão. Podemos tentar de novo?");
+            console.error("Erro completo:", e);
+            addBubble('assistant', `Aviso de Conexão: ${e.message}`);
         }
     }
 
