@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clara | IA Pessoal</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #ffffff;
+            --sidebar: #f0f4f9;
+            --text: #1f1f1f;
+            --border: #e3e3e3;
+            --user-bubble: #f0f4f9;
+            --clara-gradient: linear-gradient(70deg, #4285f4, #9b72cb, #d96570);
+            --danger: #d93025;
+        }
+
+        [data-theme="dark"] {
+            --bg: #131314;
+            --sidebar: #1e1f20;
+            --text: #e3e3e3;
+            --border: #3c4043;
+            --user-bubble: #282a2c;
+            --danger: #f28b82;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Google Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        #sidebar { width: 300px; background: var(--sidebar); padding: 15px; display: flex; flex-direction: column; border-right: 1px solid var(--border); transition: 0.3s; }
+        
+        .btn-sidebar { border: none; padding: 14px 18px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: 0.2s; width: 100%; font-size: 14px; font-family: inherit; margin-bottom: 8px; }
+        
+        .btn-new { background: #dde3ea; color: #1f1f1f; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        [data-theme="dark"] .btn-new { background: #333; color: white; }
+        .btn-new:hover { filter: brightness(0.95); transform: translateY(-1px); }
+
+        .btn-delete { background: transparent; color: var(--danger); margin-top: auto; }
+        .btn-delete:hover { background: rgba(217, 48, 37, 0.1); }
+
+        .history-list { flex: 1; overflow-y: auto; margin-top: 20px; }
+        .hist-item { padding: 10px 15px; border-radius: 12px; cursor: pointer; font-size: 14px; color: var(--text); opacity: 0.8; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hist-item:hover { background: var(--border); opacity: 1; }
+
+        /* Main Area */
+        #main { flex: 1; display: flex; flex-direction: column; position: relative; background: var(--bg); }
+        
+        header { 
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; 
+            background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); z-index: 5;
+        }
+        [data-theme="dark"] header { background: rgba(19, 19, 20, 0.7); }
+
+        #chat-window { flex: 1; overflow-y: auto; padding: 20px 18% 120px; scroll-behavior: smooth; }
+
+        /* Estilo Clara (Avatar + Texto) */
+        .clara-orb {
+            width: 35px; height: 35px; border-radius: 50%; background: var(--clara-gradient);
+            background-size: 200% 200%; flex-shrink: 0; margin-right: 20px;
+            animation: orbFloat 4s infinite ease-in-out;
+            box-shadow: 0 4px 10px rgba(66, 133, 244, 0.3);
+        }
+        @keyframes orbFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); filter: hue-rotate(20deg); } }
+
+        .msg-container { display: flex; flex-direction: column; margin-bottom: 45px; animation: slideUp 0.5s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .user-row { align-self: flex-end; max-width: 80%; background: var(--user-bubble); padding: 15px 25px; border-radius: 25px 25px 5px 25px; line-height: 1.6; }
+        .ai-row { align-self: flex-start; display: flex; width: 100%; }
+        .ai-text { flex: 1; line-height: 1.8; font-size: 16px; color: var(--text); }
+
+        /* Input Area */
+        .input-area { 
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 18% 40px; 
+            background: linear-gradient(transparent, var(--bg) 50%);
+        }
+        .input-pill { 
+            background: var(--user-bubble); border-radius: 35px; padding: 12px 28px; 
+            display: flex; align-items: center; gap: 15px; border: 1px solid transparent; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05); transition: 0.3s;
+        }
+        .input-pill:focus-within { border-color: #4285f4; background: var(--bg); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+        
+        textarea { flex: 1; border: none; outline: none; background: transparent; color: var(--text); font-size: 16px; resize: none; max-height: 180px; font-family: inherit; }
+        
+        .mic-active { color: #ea4335 !important; animation: pulseRed 1s infinite; }
+        @keyframes pulseRed { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        #stop-btn { 
+            display: none; position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); 
+            background: var(--danger); color: white; border: none; padding: 10px 25px; border-radius: 50px; 
+            font-weight: bold; cursor: pointer; z-index: 100; box-shadow: 0 4px 15px rgba(217, 48, 37, 0.4); 
+        }
+
+        /* Welcome */
+        .welcome-hero { margin-top: 8vh; }
+        .welcome-hero h1 { font-size: 64px; font-weight: 500; background: var(--clara-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
+        .welcome-hero h2 { font-size: 64px; color: #c4c7c5; margin-top: -10px; }
+    </style>
+</head>
+<body>
+
+    <aside id="sidebar">
+        <button class="btn-sidebar btn-new" onclick="startNewChat()">
+            <i class="fa-solid fa-plus"></i> Novo chat
+        </button>
+
+        <div class="history-list" id="history-list">
+            <p style="font-size: 11px; font-weight: bold; color: #888; margin: 0 0 10px 10px; letter-spacing: 1px;">HISTÓRICO</p>
+        </div>
+        
+        <button class="btn-sidebar" onclick="toggleTheme()" style="background: transparent; color: var(--text);">
+            <i class="fa-solid fa-circle-half-stroke"></i> Tema
+        </button>
+
+        <button class="btn-sidebar btn-delete" onclick="limparTudo()">
+            <i class="fa-solid fa-trash-can"></i> Limpar tudo
+        </button>
+    </aside>
+
+    <main id="main">
+        <header>
+            <div style="font-weight: 700; font-size: 20px; letter-spacing: -0.5px;">Clara <span style="font-weight: 400; opacity: 0.5;">IA</span></div>
+            <div id="clock" style="font-variant-numeric: tabular-nums; opacity: 0.6;"></div>
+        </header>
+
+        <button id="stop-btn" onclick="stopAudio()">Interromper Leitura</button>
+
+        <div id="chat-window">
+            <div id="welcome-box" class="welcome-hero">
+                <h1 id="greet">Olá!</h1>
+                <h2>Eu sou a Clara.</h2>
+                <p style="margin-top: 20px; font-size: 18px; color: #888; max-width: 500px;">Sua assistente inteligente, pronta para criar, aprender e organizar o seu dia com você.</p>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-pill">
+                <textarea id="userInput" placeholder="O que vamos fazer agora?" rows="1"></textarea>
+                <button class="btn-icon" id="mic-btn" onclick="useMic()"><i class="fa-solid fa-microphone"></i></button>
+                <button class="btn-icon" onclick="sendMsg()" style="color: #4285f4; opacity: 1;"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </main>
+
+<script>
+    const API_KEY = "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";
+    const chatWin = document.getElementById('chat-window');
+    const input = document.getElementById('userInput');
+    const stopBtn = document.getElementById('stop-btn');
+    const micBtn = document.getElementById('mic-btn');
+
+    let memory = JSON.parse(localStorage.getItem('clara_v5_history')) || [];
+
+    window.onload = () => {
+        updateTime();
+        renderHistory();
+        setGreeting();
+        if(memory.length > 0) {
+            document.getElementById('welcome-box').style.display = 'none';
+            memory.forEach(m => addBubble(m.role, m.content));
+        } else {
+            setTimeout(apresentarClara, 1000);
+        }
+    };
+
+    function apresentarClara() {
+        const intro = "Olá! Eu sou a Clara. É um prazer estar aqui com você. Como posso facilitar o seu dia hoje?";
+        addBubble('assistant', intro);
+        speak(intro);
+    }
+
+    function setGreeting() {
+        const h = new Date().getHours();
+        document.getElementById('greet').innerText = h < 12 ? "Bom dia!" : h < 18 ? "Boa tarde!" : "Boa noite!";
+    }
+
+    function updateTime() {
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        setTimeout(updateTime, 1000);
+    }
+
+    function toggleTheme() {
+        document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    }
+
+    // --- VOZ FEMININA APRIMORADA ---
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const clean = text.replace(/[*#_`]/g, '').replace(/[^\w\sÀ-ú.,?!]/g, ' ');
+        const utter = new SpeechSynthesisUtterance(clean);
+        
+        const setVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            const femininas = voices.filter(v => v.lang.includes('pt-BR') && 
+                (v.name.includes('Google') || v.name.includes('Maria') || v.name.includes('Francisca') || v.name.includes('Luciana')));
+            utter.voice = femininas[0] || voices.find(v => v.lang.includes('pt-BR'));
+            utter.pitch = 1.1; utter.rate = 1.05;
+            window.speechSynthesis.speak(utter);
+        };
+
+        if (window.speechSynthesis.getVoices().length !== 0) setVoice();
+        else window.speechSynthesis.onvoiceschanged = setVoice;
+
+        utter.onstart = () => stopBtn.style.display = 'block';
+        utter.onend = () => stopBtn.style.display = 'none';
+    }
+
+    function stopAudio() { window.speechSynthesis.cancel(); stopBtn.style.display = 'none'; }
+
+    function addBubble(role, content) {
+        if(document.getElementById('welcome-box')) document.getElementById('welcome-box').style.display = 'none';
+        const container = document.createElement('div');
+        container.className = 'msg-container';
+        const isAI = role === 'assistant';
+
+        container.innerHTML = isAI ? `
+            <div class="ai-row">
+                <div class="clara-orb"></div>
+                <div class="ai-text">${marked.parse(content)}</div>
+            </div>` : `<div class="user-row">${content}</div>`;
+
+        chatWin.appendChild(container);
+        chatWin.scrollTop = chatWin.scrollHeight;
+        hljs.highlightAll();
+    }
+
+    async function sendMsg() {
+        const text = input.value.trim();
+        if(!text) return;
+
+        addBubble('user', text);
+        memory.push({ role: 'user', content: text });
+        localStorage.setItem('clara_v5_history', JSON.stringify(memory));
+        input.value = ''; input.style.height = 'auto';
+
+        try {
+            const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [{ role: "system", content: "Você é a Clara, uma assistente virtual feminina, inteligente e gentil. Responda em português de forma clara e útil." }, ...memory.slice(-10)],
+                    temperature: 0.7
+                })
+            });
+            const data = await res.json();
+            const reply = data.choices[0].message.content;
+
+            addBubble('assistant', reply);
+            memory.push({ role: 'assistant', content: reply });
+            localStorage.setItem('clara_v5_history', JSON.stringify(memory));
+            speak(reply);
+            renderHistory();
+        } catch (e) {
+            addBubble('assistant', "Houve um erro na minha conexão. Podemos tentar de novo?");
+        }
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        list.querySelectorAll('.hist-item').forEach(p => p.remove());
+        memory.filter(m => m.role === 'user').reverse().slice(0, 8).forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'hist-item';
+            div.innerHTML = `<i class="fa-regular fa-message" style="margin-right:10px"></i> ${m.content}`;
+            list.appendChild(div);
+        });
+    }
+
+    function startNewChat() {
+        if(confirm("Iniciar nova conversa? O histórico atual será mantido na memória.")) {
+            location.reload();
+        }
+    }
+
+    function limparTudo() {
+        if(confirm("Isso apagará TODO o seu histórico permanentemente. Continuar?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    function useMic() {
+        const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(!Rec) return;
+        const r = new Rec(); r.lang = 'pt-BR';
+        r.onstart = () => micBtn.classList.add('mic-active');
+        r.onend = () => micBtn.classList.remove('mic-active');
+        r.onresult = (e) => { input.value = e.results[0][0].transcript; sendMsg(); };
+        r.start();
+    }
+
+    input.oninput = function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; };
+    input.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
+</script>
+</body>
+</html>
